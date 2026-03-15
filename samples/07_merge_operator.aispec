@@ -1,0 +1,25 @@
+// =============================================
+// サンプル 07: + マージ演算子
+// オブジェクトの浅いマージ
+// =============================================
+
+@version "0.2"
+@let BaseConfig = {
+  "timeout": 30,
+  "retries": 3,
+  "backoff": "exponential",
+  "log_level": "info"
+}
+
+{
+  "production": @BaseConfig + {
+    "retries": 5,
+    "log_level": "warn"
+  },
+  "development": @BaseConfig + {
+    "timeout": 5,
+    "retries": 0,
+    "log_level": "debug",
+    "hot_reload": true
+  }
+}

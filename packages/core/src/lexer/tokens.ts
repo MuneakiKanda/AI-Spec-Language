@@ -24,6 +24,7 @@ export enum TokenType {
   AtElse = "AtElse",               // @else
   AtType = "AtType",               // @type
   AtRef = "AtRef",                 // @ref
+  AtVersion = "AtVersion",           // @version
   AtIdentifier = "AtIdentifier",   // @<name>
 
   // 式の演算子
@@ -73,6 +74,7 @@ export const AT_KEYWORDS: Record<string, TokenType> = {
   else: TokenType.AtElse,
   type: TokenType.AtType,
   ref: TokenType.AtRef,
+  version: TokenType.AtVersion,
 };
 
 /** 通常キーワード */

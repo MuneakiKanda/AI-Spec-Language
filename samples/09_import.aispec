@@ -1,0 +1,21 @@
+// =============================================
+// サンプル 09: @import でライブラリを使う
+// 08_library.aispec から変数を取り込む
+// =============================================
+
+@version "0.2"
+@import { ApiVersion, BaseUrl, RateLimit } from "08_library"
+
+{
+  "api": {
+    "version": @ApiVersion,
+    "base_url": @BaseUrl,
+    "rate_limit": @RateLimit,
+    "endpoints": {
+      "users": {
+        "path": "/users",
+        "methods": ["GET", "POST"]
+      }
+    }
+  }
+}

@@ -161,3 +161,15 @@ export const W003_UNUSED_IMPORT: ErrorTemplate = {
   severity: "warning",
   message: "未使用のインポート",
 };
+
+export const W004_VERSION_MISMATCH: ErrorTemplate = {
+  code: "W004",
+  severity: "warning",
+  message: "@version がパーサーバージョンと一致しません",
+};
+
+export const E013_DUPLICATE_VERSION: ErrorTemplate = {
+  code: "E013",
+  severity: "error",
+  message: "@version は1ファイルにつき1つだけ指定できます",
+};

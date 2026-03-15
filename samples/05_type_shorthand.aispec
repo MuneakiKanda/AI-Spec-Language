@@ -1,0 +1,19 @@
+// =============================================
+// サンプル 05: @type() ショートハンド
+// 型 + 制約の簡略記法
+// =============================================
+
+@version "0.2"
+@let UserId = @type("string", format="uuid")
+@let Email = @type("string", format="email", maxLength=254)
+@let Age = @type("integer", min=0, max=200)
+@let Status = @type("enum", values="active,inactive,suspended")
+
+{
+  "user_schema": {
+    "id": @UserId,
+    "email": @Email,
+    "age": @Age,
+    "status": @Status
+  }
+}

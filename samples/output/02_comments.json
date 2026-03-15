@@ -1,0 +1,16 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\02_comments.aispec",
+    "parsed_at": "2026-03-15T03:11:44.317Z",
+    "includes_resolved": [],
+    "conditions_evaluated": {}
+  },
+  "name": "comment-sample",
+  "version": "2.0.0",
+  "items": [
+    1,
+    2,
+    3
+  ]
+}

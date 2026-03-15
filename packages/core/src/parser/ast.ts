@@ -101,9 +101,17 @@ export interface IncludeStatement {
   column: number;
 }
 
-export type Directive = LetStatement | ImportStatement | IncludeStatement;
+export interface VersionStatement {
+  kind: "version";
+  versionString: string;
+  line: number;
+  column: number;
+}
+
+export type Directive = VersionStatement | LetStatement | ImportStatement | IncludeStatement;
 
 export interface AiSpecFile {
+  version?: string;
   directives: Directive[];
   body: AstNode | null;
 }

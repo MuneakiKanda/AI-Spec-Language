@@ -1,0 +1,17 @@
+// =============================================
+// サンプル 01: 純粋な JSON
+// .aispec は JSON の完全な上位互換
+// =============================================
+
+@version "0.2"
+{
+  "name": "pure-json-sample",
+  "version": "1.0.0",
+  "description": "これは普通の JSON です",
+  "tags": ["sample", "json", "basic"],
+  "config": {
+    "debug": false,
+    "port": 8080,
+    "host": null
+  }
+}

@@ -1,0 +1,31 @@
+// =============================================
+// サンプル 06: @if / @elif / @else 条件分岐
+// 環境ごとの設定切り替え
+// =============================================
+
+@version "0.2"
+{
+  "database": {
+    "host": @if env == "production" {
+      "db.prod.internal"
+    } @elif env == "staging" {
+      "db.staging.internal"
+    } @else {
+      "localhost"
+    },
+
+    "port": 5432,
+
+    "pool_size": @if env == "production" {
+      20
+    } @else {
+      5
+    },
+
+    "ssl": @if env == "production" {
+      true
+    } @else {
+      false
+    }
+  }
+}

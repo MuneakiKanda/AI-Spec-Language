@@ -1,0 +1,30 @@
+// =============================================
+// サンプル 04: @let でオブジェクト・配列を変数に
+// =============================================
+
+@version "0.2"
+@let Pagination = {
+  "page": 1,
+  "per_page": 20,
+  "max_per_page": 100
+}
+
+@let DefaultHeaders = {
+  "Content-Type": "application/json",
+  "X-API-Version": "2"
+}
+
+{
+  "list_users": {
+    "method": "GET",
+    "path": "/users",
+    "headers": @DefaultHeaders,
+    "query": @Pagination
+  },
+  "list_posts": {
+    "method": "GET",
+    "path": "/posts",
+    "headers": @DefaultHeaders,
+    "query": @Pagination
+  }
+}

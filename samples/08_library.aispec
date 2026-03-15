@@ -1,0 +1,13 @@
+// =============================================
+// サンプル 08: @import ライブラリファイル
+// 他の .aispec から名前付き変数を取り込む
+// =============================================
+
+@version "0.2"
+// このファイルは @let のみで body がない「ライブラリ」ファイル
+@let ApiVersion = "v2"
+@let BaseUrl = "https://api.example.com"
+@let RateLimit = {
+  "requests_per_minute": 60,
+  "burst": 10
+}

@@ -1,0 +1,22 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\07_merge_operator.aispec",
+    "parsed_at": "2026-03-15T03:13:40.110Z",
+    "includes_resolved": [],
+    "conditions_evaluated": {}
+  },
+  "production": {
+    "timeout": 30,
+    "retries": 5,
+    "backoff": "exponential",
+    "log_level": "warn"
+  },
+  "development": {
+    "timeout": 5,
+    "retries": 0,
+    "backoff": "exponential",
+    "log_level": "debug",
+    "hot_reload": true
+  }
+}

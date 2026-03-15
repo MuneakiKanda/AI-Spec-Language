@@ -1,0 +1,35 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\04_let_objects.aispec",
+    "parsed_at": "2026-03-15T03:11:44.561Z",
+    "includes_resolved": [],
+    "conditions_evaluated": {}
+  },
+  "list_users": {
+    "method": "GET",
+    "path": "/users",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Version": "2"
+    },
+    "query": {
+      "page": 1,
+      "per_page": 20,
+      "max_per_page": 100
+    }
+  },
+  "list_posts": {
+    "method": "GET",
+    "path": "/posts",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Version": "2"
+    },
+    "query": {
+      "page": 1,
+      "per_page": 20,
+      "max_per_page": 100
+    }
+  }
+}

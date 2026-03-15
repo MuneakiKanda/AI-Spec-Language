@@ -1,0 +1,21 @@
+// =============================================
+// サンプル 03: @let 変数定義と参照
+// 値の再利用で DRY な仕様記述
+// =============================================
+
+@version "0.2"
+@let ServiceName = "user-service"
+@let DefaultTimeout = 30
+@let IsEnabled = true
+
+{
+  "service": @ServiceName,
+  "timeout": @DefaultTimeout,
+  "enabled": @IsEnabled,
+  "endpoints": {
+    "health": {
+      "path": "/health",
+      "timeout": @DefaultTimeout
+    }
+  }
+}

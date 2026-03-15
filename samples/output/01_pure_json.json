@@ -1,0 +1,22 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\01_pure_json.aispec",
+    "parsed_at": "2026-03-15T03:11:33.268Z",
+    "includes_resolved": [],
+    "conditions_evaluated": {}
+  },
+  "name": "pure-json-sample",
+  "version": "1.0.0",
+  "description": "これは普通の JSON です",
+  "tags": [
+    "sample",
+    "json",
+    "basic"
+  ],
+  "config": {
+    "debug": false,
+    "port": 8080,
+    "host": null
+  }
+}

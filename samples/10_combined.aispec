@@ -1,0 +1,48 @@
+// =============================================
+// サンプル 10: 複合サンプル — 全機能の組み合わせ
+// @let + @type + @if + merge を組み合わせた実践例
+// =============================================
+
+@version "0.2"
+@let ServiceName = "order-service"
+@let OrderId = @type("string", format="uuid")
+@let Amount = @type("number", min=0)
+@let Currency = @type("enum", values="JPY,USD,EUR")
+
+@let BaseEndpoint = {
+  "auth_required": true,
+  "rate_limit": 100
+}
+
+{
+  "service": @ServiceName,
+  "version": "1.0.0",
+
+  // 注文作成 API
+  "create_order": @BaseEndpoint + {
+    "method": "POST",
+    "path": "/orders",
+    "request_body": {
+      "order_id": @OrderId,
+      "amount": @Amount,
+      "currency": @Currency
+    },
+    "timeout": @if env == "production" {
+      10
+    } @else {
+      30
+    }
+  },
+
+  // 注文取得 API
+  "get_order": @BaseEndpoint + {
+    "method": "GET",
+    "path": "/orders/{id}",
+    "response": {
+      "order_id": @OrderId,
+      "amount": @Amount,
+      "currency": @Currency,
+      "status": @type("enum", values="pending,confirmed,shipped,delivered")
+    }
+  }
+}

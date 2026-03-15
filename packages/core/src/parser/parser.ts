@@ -11,6 +11,7 @@ import type {
   AstNode,
   AiSpecFile,
   Directive,
+  VersionStatement,
   LetStatement,
   ImportStatement,
   IncludeStatement,
@@ -29,11 +30,20 @@ export class Parser {
   parse(): AiSpecFile {
     const directives: Directive[] = [];
     let body: AstNode | null = null;
+    let version: string | undefined;
 
     while (!this.isAtEnd()) {
       const tok = this.peek();
 
-      if (tok.type === TokenType.AtLet) {
+      if (tok.type === TokenType.AtVersion) {
+        const vs = this.parseVersion();
+        if (version !== undefined) {
+          this.reporter.addError(E.E013_DUPLICATE_VERSION, this.filePath, tok.line, tok.column);
+        } else {
+          version = vs.versionString;
+        }
+        directives.push(vs);
+      } else if (tok.type === TokenType.AtLet) {
         directives.push(this.parseLet());
       } else if (tok.type === TokenType.AtImport) {
         directives.push(this.parseImport());
@@ -46,7 +56,7 @@ export class Parser {
       }
     }
 
-    return { directives, body };
+    return { version, directives, body };
   }
 
   // --- ディレクティブ ---
@@ -90,6 +100,12 @@ export class Parser {
     const tok = this.advance(); // @include
     const pathTok = this.expect(TokenType.String, E.E006_EXPECTED_VALUE);
     return { kind: "include", path: pathTok.value, line: tok.line, column: tok.column };
+  }
+
+  private parseVersion(): VersionStatement {
+    const tok = this.advance(); // @version
+    const verTok = this.expect(TokenType.String, E.E006_EXPECTED_VALUE);
+    return { kind: "version", versionString: verTok.value, line: tok.line, column: tok.column };
   }
 
   // --- 値パース ---

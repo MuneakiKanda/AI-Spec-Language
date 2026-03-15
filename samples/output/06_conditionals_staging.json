@@ -1,0 +1,17 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\06_conditionals.aispec",
+    "parsed_at": "2026-03-15T03:11:57.846Z",
+    "includes_resolved": [],
+    "conditions_evaluated": {
+      "env": "staging"
+    }
+  },
+  "database": {
+    "host": "db.staging.internal",
+    "port": 5432,
+    "pool_size": 5,
+    "ssl": false
+  }
+}

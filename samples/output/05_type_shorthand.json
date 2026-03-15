@@ -1,0 +1,41 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\05_type_shorthand.aispec",
+    "parsed_at": "2026-03-15T03:29:44.534Z",
+    "includes_resolved": [],
+    "conditions_evaluated": {}
+  },
+  "user_schema": {
+    "id": {
+      "@type": "string",
+      "constraints": {
+        "format": "uuid"
+      }
+    },
+    "email": {
+      "@type": "string",
+      "constraints": {
+        "format": "email",
+        "maxLength": 254
+      }
+    },
+    "age": {
+      "@type": "integer",
+      "constraints": {
+        "min": 0,
+        "max": 200
+      }
+    },
+    "status": {
+      "@type": "enum",
+      "constraints": {
+        "values": [
+          "active",
+          "inactive",
+          "suspended"
+        ]
+      }
+    }
+  }
+}

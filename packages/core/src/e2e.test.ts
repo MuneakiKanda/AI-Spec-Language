@@ -150,6 +150,62 @@ describe("parse() E2E", () => {
     expect(result.output).toBeNull();
   });
 
+  describe("@version ディレクティブ", () => {
+    it("@version 指定でメタデータに反映される", () => {
+      const source = `
+        @version "0.2"
+        { "name": "test" }
+      `;
+      const result = parse(source, "test.aispec");
+      expect(result.success).toBe(true);
+      const output = result.output as JsonObject;
+      const meta = output["_aispec"] as JsonObject;
+      expect(meta["version"]).toBe("0.2");
+    });
+
+    it("@version なしでもパースできる（任意）", () => {
+      const source = '{ "name": "test" }';
+      const result = parse(source, "test.aispec");
+      expect(result.success).toBe(true);
+      expect(result.metadata?.version).toBe("0.2");
+    });
+
+    it("@version が不一致の場合 W004 警告", () => {
+      const source = `
+        @version "0.3"
+        { "name": "test" }
+      `;
+      const result = parse(source, "test.aispec");
+      expect(result.success).toBe(true);
+      expect(result.warnings.some((w) => w.code === "W004")).toBe(true);
+      const output = result.output as JsonObject;
+      const meta = output["_aispec"] as JsonObject;
+      expect(meta["version"]).toBe("0.3");
+    });
+
+    it("@version が重複した場合 E013 エラー", () => {
+      const source = `
+        @version "0.2"
+        @version "0.2"
+        { "name": "test" }
+      `;
+      const result = parse(source, "test.aispec");
+      expect(result.errors.some((e) => e.code === "E013")).toBe(true);
+    });
+
+    it("@version と他のディレクティブの共存", () => {
+      const source = `
+        @version "0.2"
+        @let greeting = "hello"
+        { "message": @greeting }
+      `;
+      const result = parse(source, "test.aispec");
+      expect(result.success).toBe(true);
+      const output = result.output as JsonObject;
+      expect(output["message"]).toBe("hello");
+    });
+  });
+
   describe("エラーケース", () => {
     it("循環インポート検知", () => {
       const files: Record<string, string> = {

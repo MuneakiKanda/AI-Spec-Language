@@ -10,7 +10,8 @@ export class Emitter {
   constructor(
     private readonly filePath: string,
     private readonly includesResolved: string[],
-    private readonly conditionsEvaluated: Record<string, string>
+    private readonly conditionsEvaluated: Record<string, string>,
+    private readonly fileVersion?: string
   ) {}
 
   /** AST を 純粋な JSON に変換 */
@@ -62,7 +63,7 @@ export class Emitter {
 
   buildMetadata(): ParseMetadata {
     return {
-      version: "0.2",
+      version: this.fileVersion ?? "0.2",
       parsed_from: this.filePath,
       parsed_at: new Date().toISOString(),
       includes_resolved: this.includesResolved,
@@ -75,7 +76,13 @@ export class Emitter {
   private emitTypeShorthand(node: AstNode & { type: "type_shorthand" }): JsonValue {
     const constraints: JsonObject = {};
     for (const [key, val] of node.params) {
-      constraints[key] = this.emit(val);
+      const emitted = this.emit(val);
+      // "values" パラメータがカンマ区切り文字列の場合、配列に変換
+      if (key === "values" && typeof emitted === "string" && emitted.includes(",")) {
+        constraints[key] = emitted.split(",").map((s) => s.trim());
+      } else {
+        constraints[key] = emitted;
+      }
     }
 
     if (Object.keys(constraints).length === 0) {

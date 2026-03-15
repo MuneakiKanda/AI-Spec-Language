@@ -67,7 +67,7 @@ function parseArgs(args: string[]): {
       if (eqIdx > 0) {
         env[kv.slice(0, eqIdx)] = kv.slice(eqIdx + 1);
       }
-    } else if (arg === "--output" && i + 1 < args.length) {
+    } else if ((arg === "--output" || arg === "-o") && i + 1 < args.length) {
       output = args[++i];
     } else if (arg === "--pretty") {
       pretty = true;

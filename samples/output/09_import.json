@@ -1,0 +1,28 @@
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "C:\\Users\\nakad\\Documents\\dev\\AI-Spec-Language\\samples\\09_import.aispec",
+    "parsed_at": "2026-03-15T03:13:40.228Z",
+    "includes_resolved": [
+      "08_library.aispec"
+    ],
+    "conditions_evaluated": {}
+  },
+  "api": {
+    "version": "v2",
+    "base_url": "https://api.example.com",
+    "rate_limit": {
+      "requests_per_minute": 60,
+      "burst": 10
+    },
+    "endpoints": {
+      "users": {
+        "path": "/users",
+        "methods": [
+          "GET",
+          "POST"
+        ]
+      }
+    }
+  }
+}
