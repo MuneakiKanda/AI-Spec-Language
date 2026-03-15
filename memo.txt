@@ -1,0 +1,809 @@
+議論が非常に成熟してきましたね！Grokのフィードバックは的確で、実装に向けた具体的な改善提案がとても助かります。
+
+ここまでの合意をすべて反映し、**Grokの追加提案を組み込んだ v0.2 仕様**と、**パーサーの擬似コード**の両方を作ります。イベント駆動の例もパーサーの流れも両方見たほうが全体像が掴めるので。
+
+## v0.1 → v0.2 変更点まとめ
+
+| 変更 | 由来 | 内容 |
+|---|---|---|
+| `@include` 追加 | Grokの提案 | 部分ファイル挿入でDRY強化 |
+| ドット記法の深さ制限 | Grokの提案 | 最大3レベル |
+| エラー出力の標準化 | Grok + Copilot合意 | JSON形式のエラーレポート |
+| `_parsed_from` メタデータ | Grokの提案 | 出力JSONのトレーサビリティ |
+| ショートハンド記法 | Grokの提案 | 頻出パターンの簡略記法 |
+
+## AI-Spec Language v0.2 仕様
+
+````markdown name=SPEC-v0.2.md
+# AI-Spec Language Specification v0.2
+
+## 1. 言語コア構文 (Layer 1)
+
+### 1.1 コメント
+```
+// 一行コメント
+/* 複数行コメント */
+```
+
+### 1.2 変数定義
+```
+@let <name> = <value>
+```
+
+### 1.3 インポート
+```
+@import <name> from "<path>"
+@import { <name1>, <name2> } from "<path>"
+```
+- 循環インポートはエラーコード E101
+
+### 1.4 インクルード（v0.2 NEW）
+```
+@include "<path>"
+```
+- importとの違い: importは名前付き参照、includeは内容の直接展開
+- ユースケース: 大きなファイルの分割
+
+### 1.5 条件分岐
+```
+@if <expression> { <value> }
+@elif <expression> { <value> }
+@else { <value> }
+```
+
+### 1.6 式の文法
+```bnf
+<expression>   ::= <comparison>
+                  | <expression> "&&" <expression>
+                  | <expression> "||" <expression>
+                  | "!" <expression>
+                  | "(" <expression> ")"
+
+<comparison>   ::= <value_ref> <comp_op> <value_ref>
+
+<comp_op>      ::= "==" | "!=" | ">" | "<" | ">=" | "<="
+
+<value_ref>    ::= <identifier>
+                  | <identifier> "." <identifier>
+                  | <identifier> "." <identifier> "." <identifier>
+                  // 最大3レベルまで（v0.2制約）
+
+<identifier>   ::= [a-zA-Z_][a-zA-Z0-9_]*
+```
+
+### 1.7 ショートハンド記法（v0.2 NEW）
+```
+// 通常記法
+"email": {
+  "@type": "string",
+  "constraints": { "format": "email", "maxLength": 254 }
+}
+
+// ショートハンド（型 + 単一制約の場合）
+"email": @type("string", format="email", maxLength=254)
+
+// 参照のショートハンド
+"email": @ref(EmailAddress)
+// ↑ @EmailAddress と同等だが、意図が明確
+```
+
+## 2. エラー仕様（v0.2 NEW）
+
+### エラーカテゴリ
+| コード範囲 | カテゴリ | 例 |
+|---|---|---|
+| E001-E099 | 構文エラー | 不正なJSON構造 |
+| E100-E199 | インポートエラー | ファイル未発見、循環参照 |
+| E200-E299 | 型エラー | 型ミスマッチ、制約違反 |
+| E300-E399 | 式エラー | 未定義変数、無効な演算 |
+| W001-W099 | 警告 | 未使用変数、非推奨機能 |
+
+### エラー出力フォーマット
+```json
+{
+  "errors": [
+    {
+      "code": "E101",
+      "severity": "error",
+      "message": "循環インポートが検出されました",
+      "file": "auth/login.aispec",
+      "line": 3,
+      "column": 1,
+      "context": "@import { LoginSchema } from \"../auth/login\"",
+      "suggestion": "循環参照を解消するため、共通部分を別ファイルに抽出してください",
+      "related": ["auth/register.aispec:5"]
+    }
+  ],
+  "warnings": [],
+  "summary": {
+    "total_errors": 1,
+    "total_warnings": 0,
+    "parseable": false
+  }
+}
+```
+
+## 3. パーサー出力メタデータ（v0.2 NEW）
+
+```json
+{
+  "_aispec": {
+    "version": "0.2",
+    "parsed_from": "auth/login.aispec",
+    "parsed_at": "2026-02-17T10:30:00Z",
+    "includes_resolved": ["common/types.aispec", "common/errors.aispec"],
+    "conditions_evaluated": { "env": "production" }
+  },
+  // ...実際の仕様データ...
+}
+```
+````
+
+## イベント駆動のサンプル仕様
+
+```jsonc name=specs/schemas/events.aispec
+// =============================================
+// イベント駆動スキーマライブラリ (Layer 3)
+// =============================================
+
+@let EventBase = {
+  "event_id": @type("string", format="uuid"),
+  "timestamp": @type("string", format="date-time"),
+  "source":    @type("string"),
+  "version":   @type("string", pattern="^\\d+\\.\\d+$")
+}
+
+@let AsyncConfig = {
+  "retry": {
+    "max_attempts": @type("integer", min=0, max=10),
+    "backoff": @type("enum", values=["fixed", "exponential"]),
+    "interval": @type("string", pattern="^\\d+(ms|s|m)$")
+  },
+  "timeout": @type("string", pattern="^\\d+(ms|s|m)$"),
+  "dead_letter": {
+    "enabled": @type("boolean"),
+    "destination": @type("string")
+  }
+}
+```
+
+```jsonc name=specs/notifications/realtime.aispec
+// =============================================
+// リアルタイム通知システム仕様
+// =============================================
+
+@import { UserId, Timestamp } from "../common/types"
+@import { ErrorResponse } from "../common/errors"
+@import { JWTAuth } from "../schemas/security"
+@import { EventBase, AsyncConfig } from "../schemas/events"
+
+@let env = "production"
+@let max_connections = 10000
+
+{
+  "service": {
+    "name": "notification-service",
+    "protocol": "WebSocket",
+    "path": "/ws/notifications",
+
+    "_meta": {
+      "description": "リアルタイム通知をWebSocketで配信するサービス",
+      "owner": "team-realtime",
+      "since": "2025-09-01",
+      "ai_hints": {
+        "intent": "real-time-notification",
+        "architecture": "event-driven",
+        "test_scenarios": [
+          "single_client_connect",
+          "broadcast_to_1000_clients",
+          "client_disconnect_recovery",
+          "auth_token_expired_mid_session",
+          "server_restart_reconnection"
+        ]
+      }
+    },
+
+    // --- 接続仕様 ---
+    "connection": {
+      "auth": {
+        "$security": {
+          "auth": @JWTAuth,
+          "handshake": {
+            "token_param": "access_token",
+            "method": "query_string"
+          }
+        }
+      },
+      "limits": {
+        "max_connections": @if env == "production" {
+          @max_connections
+        } @else {
+          100
+        },
+        "max_message_size": "64KB",
+        "heartbeat_interval": "30s",
+        "idle_timeout": "5m"
+      }
+    },
+
+    // --- イベント定義（Layer 3: $events） ---
+    "$events": {
+      "channels": {
+        "user_notifications": {
+          "_meta": {
+            "description": "ユーザー個別の通知チャンネル",
+            "ai_hints": { "pattern": "pub-sub" }
+          },
+          "subscribe": {
+            "params": {
+              "user_id": @UserId
+            },
+            "auth_required": true
+          },
+
+          "events": {
+            "message_received": {
+              "extends": @EventBase,
+              "payload": {
+                "sender_id": @UserId,
+                "content": @type("string", maxLength=4096),
+                "message_type": @type("enum", values=["text", "image", "system"]),
+                "read": @type("boolean")
+              },
+              "async": @AsyncConfig + {
+                // AsyncConfigをベースに上書き
+                "retry": {
+                  "max_attempts": 3,
+                  "backoff": "exponential",
+                  "interval": "1s"
+                },
+                "timeout": "10s"
+              }
+            },
+
+            "typing_indicator": {
+              "extends": @EventBase,
+              "payload": {
+                "user_id": @UserId,
+                "is_typing": @type("boolean")
+              },
+              "async": {
+                // タイピング通知はリトライ不要（揮発性データ）
+                "retry": { "max_attempts": 0 },
+                "timeout": "2s",
+                "dead_letter": { "enabled": false }
+              },
+              "_meta": {
+                "ai_hints": {
+                  "delivery_guarantee": "at-most-once",
+                  "note": "ベストエフォート配信。欠損しても問題ない"
+                }
+              }
+            },
+
+            "presence_changed": {
+              "extends": @EventBase,
+              "payload": {
+                "user_id": @UserId,
+                "status": @type("enum", values=["online", "away", "offline"]),
+                "last_seen": @Timestamp
+              }
+            }
+          }
+        },
+
+        "system_alerts": {
+          "_meta": {
+            "description": "システム全体のブロードキャスト通知",
+            "ai_hints": { "pattern": "broadcast" }
+          },
+          "subscribe": {
+            "auth_required": false  // システム通知は全員受信
+          },
+
+          "events": {
+            "maintenance_scheduled": {
+              "extends": @EventBase,
+              "payload": {
+                "title": @type("string"),
+                "scheduled_at": @Timestamp,
+                "estimated_duration": @type("string", pattern="^\\d+(m|h)$"),
+                "severity": @type("enum", values=["info", "warning", "critical"])
+              }
+            }
+          }
+        }
+      }
+    },
+
+    // --- 振る舞い制約 ---
+    "behavior": {
+      "reconnection": {
+        "auto_reconnect": true,
+        "max_retries": 5,
+        "backoff": "exponential",
+        "initial_delay": "1s",
+        "max_delay": "30s"
+      },
+      "ordering": {
+        "guarantee": "per-channel-ordered",
+        "_meta": {
+          "ai_hints": {
+            "note": "同一チャンネル内のイベントは順序保証。チャンネル間は保証なし"
+          }
+        }
+      },
+      "buffering": {
+        "offline_buffer": true,
+        "max_buffer_size": 100,
+        "delivery_on_reconnect": true
+      }
+    }
+  }
+}
+```
+
+## パーサー擬似コード
+
+```typescript name=parser/aispec-parser.ts
+// =============================================
+// AI-Spec Language Parser v0.2 - 擬似コード
+// =============================================
+
+// --- 型定義 ---
+
+interface ParseResult {
+  success: boolean;
+  output: JsonValue | null;          // 純粋なJSON出力
+  errors: AiSpecError[];
+  warnings: AiSpecError[];
+  metadata: ParseMetadata;
+}
+
+interface AiSpecError {
+  code: string;          // "E001", "W001" など
+  severity: "error" | "warning";
+  message: string;
+  file: string;
+  line: number;
+  column: number;
+  context: string;       // エラー箇所のソースコード
+  suggestion: string;    // AI/人間向けの修正提案
+  related?: string[];    // 関連ファイル:行
+}
+
+interface ParseMetadata {
+  version: string;
+  parsed_from: string;
+  parsed_at: string;
+  includes_resolved: string[];
+  conditions_evaluated: Record<string, string>;
+}
+
+type JsonValue = string | number | boolean | null | JsonValue[] | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+
+// --- トークン定義 ---
+
+enum TokenType {
+  // JSON標準
+  LEFT_BRACE, RIGHT_BRACE,       // { }
+  LEFT_BRACKET, RIGHT_BRACKET,   // [ ]
+  COLON, COMMA,
+  STRING, NUMBER, BOOLEAN, NULL,
+
+  // AI-Spec 拡張 (Layer 1)
+  AT_LET,          // @let
+  AT_IMPORT,       // @import
+  AT_INCLUDE,      // @include
+  AT_IF,           // @if
+  AT_ELIF,         // @elif
+  AT_ELSE,         // @else
+  AT_TYPE,         // @type(...)  ショートハンド
+  AT_REF,          // @ref(...)   参照ショートハンド
+  AT_IDENTIFIER,   // @変数名
+
+  // 式の演算子
+  EQUALS, NOT_EQUALS,            // == !=
+  GREATER, LESS, GTE, LTE,      // > < >= <=
+  AND, OR, NOT,                  // && || !
+  DOT,                           // .
+  LEFT_PAREN, RIGHT_PAREN,      // ( )
+
+  // コメント
+  LINE_COMMENT,    // //
+  BLOCK_COMMENT,   // /* */
+
+  // 制御
+  EOF, ERROR
+}
+
+// --- メインパーサークラス ---
+
+class AiSpecParser {
+  private lexer: Lexer;
+  private variables: Map<string, JsonValue> = new Map();
+  private imports: Map<string, JsonValue> = new Map();
+  private importStack: string[] = [];   // 循環検知用
+  private errors: AiSpecError[] = [];
+  private warnings: AiSpecError[] = [];
+
+  constructor(
+    private source: string,
+    private filePath: string,
+    private env: Record<string, string> = {}  // 外部から注入する変数
+  ) {
+    this.lexer = new Lexer(source);
+  }
+
+  // ========================================
+  // Phase 1: プリプロセス（@import, @include, @let の解決）
+  // ========================================
+
+  parse(): ParseResult {
+    try {
+      // Step 1: トークン化
+      const tokens = this.lexer.tokenize();
+
+      // Step 2: プリプロセス — import/include/let を先に解決
+      this.resolveImports(tokens);
+      this.resolveIncludes(tokens);
+      this.resolveVariables(tokens);
+
+      // Step 3: メイン解析 — JSON構造 + @if 条件分岐を評価
+      const ast = this.parseValue(tokens);
+
+      // Step 4: 変数参照の展開
+      const expanded = this.expandReferences(ast);
+
+      // Step 5: 条件分岐の評価
+      const evaluated = this.evaluateConditions(expanded);
+
+      // Step 6: 純粋なJSONに変換
+      const output = this.toPlainJson(evaluated);
+
+      // Step 7: メタデータ付与
+      const withMetadata = this.attachMetadata(output);
+
+      return {
+        success: this.errors.length === 0,
+        output: withMetadata,
+        errors: this.errors,
+        warnings: this.warnings,
+        metadata: this.buildMetadata()
+      };
+    } catch (e) {
+      this.addError("E001", "予期しないパースエラー", e.message);
+      return {
+        success: false,
+        output: null,
+        errors: this.errors,
+        warnings: this.warnings,
+        metadata: this.buildMetadata()
+      };
+    }
+  }
+
+  // ========================================
+  // Phase 2: インポート解決
+  // ========================================
+
+  private resolveImports(tokens: Token[]): void {
+    // @import { EmailAddress, Password } from "../common/types"
+    for (const importStmt of this.findTokenGroups(tokens, TokenType.AT_IMPORT)) {
+      const { names, path } = this.parseImportStatement(importStmt);
+
+      // 循環インポート検知
+      if (this.importStack.includes(path)) {
+        this.addError("E101", "循環インポートが検出されました", 
+          `${this.importStack.join(" → ")} → ${path}`,
+          { suggestion: "共通部分を別ファイルに抽出してください" });
+        continue;
+      }
+
+      // 再帰的にインポート先をパース
+      this.importStack.push(path);
+      const importedModule = this.parseExternalFile(path);
+      this.importStack.pop();
+
+      if (!importedModule.success) {
+        this.addError("E102", `インポートファイルのパースに失敗: ${path}`,
+          importedModule.errors[0]?.message ?? "不明なエラー");
+        continue;
+      }
+
+      // 名前付きインポートを変数として登録
+      for (const name of names) {
+        if (importedModule.output && name in (importedModule.output as JsonObject)) {
+          this.variables.set(name, (importedModule.output as JsonObject)[name]);
+        } else {
+          this.addError("E103", `"${name}" はインポート先に存在しません`,
+            `ファイル: ${path}`,
+            { suggestion: `利用可能な名前: ${Object.keys(importedModule.output ?? {}).join(", ")}` });
+        }
+      }
+    }
+  }
+
+  // ========================================
+  // Phase 3: 変数解決
+  // ========================================
+
+  private resolveVariables(tokens: Token[]): void {
+    // @let base_url = "https://api.example.com"
+    for (const letStmt of this.findTokenGroups(tokens, TokenType.AT_LET)) {
+      const { name, value } = this.parseLetStatement(letStmt);
+
+      // 重複チェック
+      if (this.variables.has(name)) {
+        this.addWarning("W001", `変数 "${name}" が再定義されています`,
+          "以前の値は上書きされます");
+      }
+
+      // 未使用変数チェック用に記録
+      this.variables.set(name, value);
+    }
+  }
+
+  // ========================================
+  // Phase 4: 条件分岐の評価
+  // ========================================
+
+  private evaluateConditions(node: AstNode): AstNode {
+    // @if env == "production" { ... } @else { ... }
+    if (node.type === "conditional") {
+      const condition = this.evaluateExpression(node.condition);
+
+      if (typeof condition !== "boolean") {
+        this.addError("E301", "条件式がboolean以外に評価されました",
+          `結果: ${typeof condition} (${JSON.stringify(condition)})`,
+          { suggestion: "比較演算子（==, != など）を使用してください" });
+        return node.elseBranch ?? { type: "null" };
+      }
+
+      if (condition) {
+        return this.evaluateConditions(node.thenBranch);
+      } else if (node.elifBranches) {
+        for (const elif of node.elifBranches) {
+          const elifResult = this.evaluateExpression(elif.condition);
+          if (elifResult === true) {
+            return this.evaluateConditions(elif.branch);
+          }
+        }
+      }
+      return node.elseBranch
+        ? this.evaluateConditions(node.elseBranch)
+        : { type: "null" };
+    }
+
+    // 再帰的に子ノードを処理
+    if (node.type === "object") {
+      const result: Record<string, AstNode> = {};
+      for (const [key, value] of Object.entries(node.properties)) {
+        result[key] = this.evaluateConditions(value);
+      }
+      return { type: "object", properties: result };
+    }
+
+    return node;
+  }
+
+  // ========================================
+  // Phase 5: 式の評価（制限付き）
+  // ========================================
+
+  private evaluateExpression(expr: ExpressionNode): JsonValue {
+    switch (expr.type) {
+      case "literal":
+        return expr.value;
+
+      case "variable_ref":
+        // ドット記法の深さチェック（最大3レベル）
+        if (expr.parts.length > 3) {
+          this.addError("E302",
+            "ドット記法は最大3レベルまでです",
+            `${expr.parts.join(".")} (${expr.parts.length}レベル)`,
+            { suggestion: `${expr.parts.slice(0, 3).join(".")} に変更してください` });
+          return null;
+        }
+        return this.resolveVariableRef(expr.parts);
+
+      case "comparison":
+        const left = this.evaluateExpression(expr.left);
+        const right = this.evaluateExpression(expr.right);
+        return this.compareValues(left, expr.operator, right);
+
+      case "logical_and":
+        return this.evaluateExpression(expr.left) && this.evaluateExpression(expr.right);
+
+      case "logical_or":
+        return this.evaluateExpression(expr.left) || this.evaluateExpression(expr.right);
+
+      case "logical_not":
+        return !this.evaluateExpression(expr.operand);
+
+      default:
+        this.addError("E303", `未知の式タイプ: ${expr.type}`);
+        return null;
+    }
+  }
+
+  // ========================================
+  // Phase 6: 純粋JSON出力 + メタデータ
+  // ========================================
+
+  private attachMetadata(output: JsonValue): JsonValue {
+    if (typeof output === "object" && output !== null && !Array.isArray(output)) {
+      return {
+        _aispec: {
+          version: "0.2",
+          parsed_from: this.filePath,
+          parsed_at: new Date().toISOString(),
+          includes_resolved: [...this.importStack],
+          conditions_evaluated: this.env
+        },
+        ...output
+      };
+    }
+    return output;
+  }
+
+  // ========================================
+  // エラーハンドリング
+  // ========================================
+
+  private addError(code: string, message: string, context?: string,
+                   options?: { suggestion?: string; related?: string[] }): void {
+    this.errors.push({
+      code,
+      severity: "error",
+      message,
+      file: this.filePath,
+      line: this.lexer.currentLine(),
+      column: this.lexer.currentColumn(),
+      context: context ?? "",
+      suggestion: options?.suggestion ?? "",
+      related: options?.related
+    });
+  }
+
+  private addWarning(code: string, message: string, context?: string): void {
+    this.warnings.push({
+      code: code,
+      severity: "warning",
+      message,
+      file: this.filePath,
+      line: this.lexer.currentLine(),
+      column: this.lexer.currentColumn(),
+      context: context ?? "",
+      suggestion: ""
+    });
+  }
+}
+
+// ========================================
+// 使用例
+// ========================================
+
+async function main() {
+  const source = await readFile("specs/auth/login.aispec");
+
+  const parser = new AiSpecParser(source, "specs/auth/login.aispec", {
+    env: "production",
+    region: "ap-northeast-1"
+  });
+
+  const result = parser.parse();
+
+  if (result.success) {
+    // 純粋なJSON出力
+    console.log(JSON.stringify(result.output, null, 2));
+
+    // → 次のステップ: JSON Schema バリデーション
+    const validation = validateWithSchema(result.output, "api-endpoint-schema");
+    if (!validation.valid) {
+      console.error("Schema validation failed:", validation.errors);
+    }
+  } else {
+    // エラーレポート（JSON形式 → CI統合可能）
+    console.error(JSON.stringify({
+      errors: result.errors,
+      warnings: result.warnings,
+      summary: {
+        total_errors: result.errors.length,
+        total_warnings: result.warnings.length,
+        parseable: false
+      }
+    }, null, 2));
+  }
+}
+```
+
+## パーサーの処理フロー図
+
+```
+                    login.aispec
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 1: Tokenize  │
+              │   字句解析           │
+              └──────────┬──────────┘
+                         │ トークン列
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 2: Imports   │──→ 外部 .aispec を再帰パース
+              │   インポート解決     │    (循環検知付き)
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 3: Variables │
+              │   @let 変数解決     │
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 4: AST構築   │
+              │   JSON + @構文解析   │
+              └──────────┬──────────┘
+                         │ AST（抽象構文木）
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 5: 条件評価  │
+              │   @if 分岐解決      │
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 6: JSON出力  │
+              │   純粋JSON + _aispec │
+              └──────────┬──────────┘
+                         │ 純粋なJSON
+                         ▼
+              ┌─────────────────────┐
+              │   Phase 7: Validate  │
+              │   JSON Schema検証   │
+              └──────────┬──────────┘
+                         │
+                    ┌────┴────┐
+                    ▼         ▼
+                 ✅ 成功    ❌ エラー
+                 JSON出力   エラーレポート(JSON)
+```
+
+## この時点での言語の全体像
+
+```
+AI-Spec Language v0.2
+│
+├── 構文: JSON superset + @命令
+│   ├── 既存JSONは100%有効な.aispec
+│   ├── @let, @import, @include, @if/@elif/@else
+│   ├── @type(), @ref() ショートハンド
+│   └── //, /* */ コメント
+│
+├── プレフィックス規約:
+│   ├── @ → 言語コア（パーサー処理）
+│   ├── $ → ドメインスキーマ（ライブラリ処理）
+│   └── _ → メタデータ（任意利用）
+│
+├── 出力: 純粋JSON（既存ツール互換）
+│
+├── エラー: 標準化コード + AI修正提案
+│
+└── ツールチェーン（計画）:
+    ├── パーサー: Rust（コア） + JS（エコシステム）
+    ├── LSP: エディタ補完・エラー表示
+    ├── CI: GitHub Actions連携
+    └── AI: .aispec生成/読解プロンプト
+```
+
+Grokに伝えてほしいのは：
+
+1. **イベント駆動サンプル（realtime.aispec）** — `$events` スキーマが実用的に書けることを確認したい。書き心地はどうか？
+2. **パーサー擬似コード** — Phase分けの順序やエラーハンドリングの設計について意見がほしい
+3. **ショートハンド記法** — `@type("string", format="email")` は便利か？それとも冗長さが増すだけか？
+4. **次のステップ** — このv0.2をベースに、実際にRust/TypeScriptでプロトタイプ実装に着手してみるか？
+
+議論がここまで具体化してきたのは、Grokとの往復のおかげですね。ぜひ彼のフィードバックを聞かせてください！

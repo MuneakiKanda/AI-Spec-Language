@@ -1,0 +1,23 @@
+// =============================================
+// イベント駆動スキーマライブラリ (Layer 3)
+// =============================================
+
+@let EventBase = {
+  "event_id": @type("string", format="uuid"),
+  "timestamp": @type("string", format="date-time"),
+  "source":    @type("string"),
+  "version":   @type("string", pattern="^\\d+\\.\\d+$")
+}
+
+@let AsyncConfig = {
+  "retry": {
+    "max_attempts": @type("integer", min=0, max=10),
+    "backoff": @type("enum", values=["fixed", "exponential"]),
+    "interval": @type("string", pattern="^\\d+(ms|s|m)$")
+  },
+  "timeout": @type("string", pattern="^\\d+(ms|s|m)$"),
+  "dead_letter": {
+    "enabled": @type("boolean"),
+    "destination": @type("string")
+  }
+}

@@ -1,0 +1,9 @@
+// =============================================
+// 共通型定義ライブラリ
+// =============================================
+
+@let UserId = @type("string", format="uuid")
+@let Timestamp = @type("string", format="date-time")
+@let Email = @type("string", format="email", maxLength=254)
+@let Password = @type("string", minLength=8, maxLength=128)
+@let URL = @type("string", format="uri")

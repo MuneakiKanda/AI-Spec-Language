@@ -1,0 +1,12 @@
+// =============================================
+// セキュリティスキーマ定義
+// =============================================
+
+@let JWTAuth = {
+  "type": "jwt",
+  "algorithm": "RS256",
+  "issuer": "auth-service",
+  "audience": "api",
+  "token_expiry": "1h",
+  "refresh_expiry": "7d"
+}

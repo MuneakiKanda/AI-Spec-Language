@@ -1,0 +1,171 @@
+// =============================================
+// リアルタイム通知システム仕様
+// =============================================
+
+@import { UserId, Timestamp } from "../common/types"
+@import { ErrorResponse } from "../common/errors"
+@import { JWTAuth } from "../schemas/security"
+@import { EventBase, AsyncConfig } from "../schemas/events"
+
+@let env = "production"
+@let max_connections = 10000
+
+{
+  "service": {
+    "name": "notification-service",
+    "protocol": "WebSocket",
+    "path": "/ws/notifications",
+
+    "_meta": {
+      "description": "リアルタイム通知をWebSocketで配信するサービス",
+      "owner": "team-realtime",
+      "since": "2025-09-01",
+      "ai_hints": {
+        "intent": "real-time-notification",
+        "architecture": "event-driven",
+        "test_scenarios": [
+          "single_client_connect",
+          "broadcast_to_1000_clients",
+          "client_disconnect_recovery",
+          "auth_token_expired_mid_session",
+          "server_restart_reconnection"
+        ]
+      }
+    },
+
+    // --- 接続仕様 ---
+    "connection": {
+      "auth": {
+        "$security": {
+          "auth": @JWTAuth,
+          "handshake": {
+            "token_param": "access_token",
+            "method": "query_string"
+          }
+        }
+      },
+      "limits": {
+        "max_connections": @if env == "production" {
+          @max_connections
+        } @else {
+          100
+        },
+        "max_message_size": "64KB",
+        "heartbeat_interval": "30s",
+        "idle_timeout": "5m"
+      }
+    },
+
+    // --- イベント定義（Layer 3: $events） ---
+    "$events": {
+      "channels": {
+        "user_notifications": {
+          "_meta": {
+            "description": "ユーザー個別の通知チャンネル",
+            "ai_hints": { "pattern": "pub-sub" }
+          },
+          "subscribe": {
+            "params": {
+              "user_id": @UserId
+            },
+            "auth_required": true
+          },
+
+          "events": {
+            "message_received": {
+              "extends": @EventBase,
+              "payload": {
+                "sender_id": @UserId,
+                "content": @type("string", maxLength=4096),
+                "message_type": @type("enum", values=["text", "image", "system"]),
+                "read": @type("boolean")
+              },
+              "async": @AsyncConfig + {
+                "retry": {
+                  "max_attempts": 3,
+                  "backoff": "exponential",
+                  "interval": "1s"
+                },
+                "timeout": "10s"
+              }
+            },
+
+            "typing_indicator": {
+              "extends": @EventBase,
+              "payload": {
+                "user_id": @UserId,
+                "is_typing": @type("boolean")
+              },
+              "async": {
+                "retry": { "max_attempts": 0 },
+                "timeout": "2s",
+                "dead_letter": { "enabled": false }
+              },
+              "_meta": {
+                "ai_hints": {
+                  "delivery_guarantee": "at-most-once",
+                  "note": "ベストエフォート配信。欠損しても問題ない"
+                }
+              }
+            },
+
+            "presence_changed": {
+              "extends": @EventBase,
+              "payload": {
+                "user_id": @UserId,
+                "status": @type("enum", values=["online", "away", "offline"]),
+                "last_seen": @Timestamp
+              }
+            }
+          }
+        },
+
+        "system_alerts": {
+          "_meta": {
+            "description": "システム全体のブロードキャスト通知",
+            "ai_hints": { "pattern": "broadcast" }
+          },
+          "subscribe": {
+            "auth_required": false
+          },
+
+          "events": {
+            "maintenance_scheduled": {
+              "extends": @EventBase,
+              "payload": {
+                "title": @type("string"),
+                "scheduled_at": @Timestamp,
+                "estimated_duration": @type("string", pattern="^\\d+(m|h)$"),
+                "severity": @type("enum", values=["info", "warning", "critical"])
+              }
+            }
+          }
+        }
+      }
+    },
+
+    // --- 振る舞い制約 ---
+    "behavior": {
+      "reconnection": {
+        "auto_reconnect": true,
+        "max_retries": 5,
+        "backoff": "exponential",
+        "initial_delay": "1s",
+        "max_delay": "30s"
+      },
+      "ordering": {
+        "guarantee": "per-channel-ordered",
+        "_meta": {
+          "ai_hints": {
+            "note": "同一チャンネル内のイベントは順序保証。チャンネル間は保証なし"
+          }
+        }
+      },
+      "buffering": {
+        "offline_buffer": true,
+        "max_buffer_size": 100,
+        "delivery_on_reconnect": true
+      }
+    }
+  }
+}
