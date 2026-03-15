@@ -3,7 +3,7 @@
 // 他の .aispec から名前付き変数を取り込む
 // =============================================
 
-@version "0.2"
+@version "0.2.0"
 // このファイルは @let のみで body がない「ライブラリ」ファイル
 @let ApiVersion = "v2"
 @let BaseUrl = "https://api.example.com"

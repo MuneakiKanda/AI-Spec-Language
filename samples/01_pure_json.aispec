@@ -3,7 +3,7 @@
 // .aispec は JSON の完全な上位互換
 // =============================================
 
-@version "0.2"
+@version "0.2.0"
 {
   "name": "pure-json-sample",
   "version": "1.0.0",

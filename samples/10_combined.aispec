@@ -3,7 +3,7 @@
 // @let + @type + @if + merge を組み合わせた実践例
 // =============================================
 
-@version "0.2"
+@version "0.2.0"
 @let ServiceName = "order-service"
 @let OrderId = @type("string", format="uuid")
 @let Amount = @type("number", min=0)

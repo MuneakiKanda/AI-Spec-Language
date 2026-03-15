@@ -3,7 +3,7 @@
 // =============================================
 
 import { describe, it, expect } from "vitest";
-import { parse } from "./index.js";
+import { parse, PARSER_VERSION } from "./index.js";
 import type { FileResolver, JsonObject } from "./types.js";
 
 describe("parse() E2E", () => {
@@ -135,7 +135,7 @@ describe("parse() E2E", () => {
     expect(result.success).toBe(true);
     const output = result.output as JsonObject;
     const meta = output["_aispec"] as JsonObject;
-    expect(meta["version"]).toBe("0.2");
+    expect(meta["version"]).toBe(PARSER_VERSION);
     expect(meta["parsed_from"]).toBe("my/file.aispec");
     expect(meta["conditions_evaluated"]).toEqual({ env: "production" });
   });
@@ -153,21 +153,21 @@ describe("parse() E2E", () => {
   describe("@version ディレクティブ", () => {
     it("@version 指定でメタデータに反映される", () => {
       const source = `
-        @version "0.2"
+        @version "${PARSER_VERSION}"
         { "name": "test" }
       `;
       const result = parse(source, "test.aispec");
       expect(result.success).toBe(true);
       const output = result.output as JsonObject;
       const meta = output["_aispec"] as JsonObject;
-      expect(meta["version"]).toBe("0.2");
+      expect(meta["version"]).toBe(PARSER_VERSION);
     });
 
     it("@version なしでもパースできる（任意）", () => {
       const source = '{ "name": "test" }';
       const result = parse(source, "test.aispec");
       expect(result.success).toBe(true);
-      expect(result.metadata?.version).toBe("0.2");
+      expect(result.metadata?.version).toBe(PARSER_VERSION);
     });
 
     it("@version が不一致の場合 W004 警告", () => {
@@ -185,8 +185,8 @@ describe("parse() E2E", () => {
 
     it("@version が重複した場合 E013 エラー", () => {
       const source = `
-        @version "0.2"
-        @version "0.2"
+        @version "${PARSER_VERSION}"
+        @version "${PARSER_VERSION}"
         { "name": "test" }
       `;
       const result = parse(source, "test.aispec");
@@ -195,7 +195,7 @@ describe("parse() E2E", () => {
 
     it("@version と他のディレクティブの共存", () => {
       const source = `
-        @version "0.2"
+        @version "${PARSER_VERSION}"
         @let greeting = "hello"
         { "message": @greeting }
       `;

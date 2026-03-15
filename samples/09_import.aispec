@@ -3,7 +3,7 @@
 // 08_library.aispec から変数を取り込む
 // =============================================
 
-@version "0.2"
+@version "0.2.0"
 @import { ApiVersion, BaseUrl, RateLimit } from "08_library"
 
 {

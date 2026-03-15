@@ -4,7 +4,7 @@
 // =============================================
 
 import { describe, it, expect } from "vitest";
-import { parse } from "./index.js";
+import { parse, PARSER_VERSION } from "./index.js";
 import type { FileResolver, JsonObject, JsonValue } from "./types.js";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -312,7 +312,7 @@ describe("サンプルファイル統合テスト", () => {
       const out = result.output as JsonObject;
       const meta = out["_aispec"] as JsonObject;
 
-      expect(meta["version"]).toBe("0.2");
+      expect(meta["version"]).toBe(PARSER_VERSION);
       expect(meta["parsed_from"]).toBe("samples/01_pure_json.aispec");
       expect(meta["parsed_at"]).toBeDefined();
     });

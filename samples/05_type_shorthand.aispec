@@ -3,7 +3,7 @@
 // 型 + 制約の簡略記法
 // =============================================
 
-@version "0.2"
+@version "0.2.0"
 @let UserId = @type("string", format="uuid")
 @let Email = @type("string", format="email", maxLength=254)
 @let Age = @type("integer", min=0, max=200)

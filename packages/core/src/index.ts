@@ -2,6 +2,16 @@
 // AI-Spec Language - Public API
 // =============================================
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const corePkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8")) as { version: string };
+
+/** パーサーバージョン（package.json から取得） */
+export const PARSER_VERSION = corePkg.version;
+
 export { Lexer } from "./lexer/lexer.js";
 export { Scanner } from "./lexer/scanner.js";
 export { TokenType } from "./lexer/tokens.js";
@@ -66,15 +76,18 @@ export function parse(
   const file = parser.parse();
 
   // Version compatibility check
-  const PARSER_VERSION = "0.2";
-  if (file.version && file.version !== PARSER_VERSION) {
-    reporter.addWarning(
-      ErrorCodes.W004_VERSION_MISMATCH,
-      filePath,
-      1,
-      1,
-      `file: ${file.version}, parser: ${PARSER_VERSION}`
-    );
+  if (file.version) {
+    const fileMajorMinor = file.version.split(".").slice(0, 2).join(".");
+    const parserMajorMinor = PARSER_VERSION.split(".").slice(0, 2).join(".");
+    if (fileMajorMinor !== parserMajorMinor) {
+      reporter.addWarning(
+        ErrorCodes.W004_VERSION_MISMATCH,
+        filePath,
+        1,
+        1,
+        `file: ${file.version}, parser: ${PARSER_VERSION}`
+      );
+    }
   }
 
   // Phase 4: Resolve directives (@import, @include, @let)
@@ -83,7 +96,7 @@ export function parse(
 
   if (!file.body) {
     // ディレクティブのみのファイル（ライブラリ）
-    const emitter = new Emitter(filePath, resolver.includesResolved, env, file.version);
+    const emitter = new Emitter(filePath, resolver.includesResolved, env, PARSER_VERSION, file.version);
     return {
       success: !reporter.hasErrors,
       output: null,
@@ -101,7 +114,7 @@ export function parse(
   const evaluated = evaluator.evaluate(expanded);
 
   // Phase 7: Emit pure JSON + metadata
-  const emitter = new Emitter(filePath, resolver.includesResolved, env, file.version);
+  const emitter = new Emitter(filePath, resolver.includesResolved, env, PARSER_VERSION, file.version);
   const output = emitter.emit(evaluated);
   const withMetadata = emitter.attachMetadata(output);
 

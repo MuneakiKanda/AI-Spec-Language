@@ -11,6 +11,7 @@ export class Emitter {
     private readonly filePath: string,
     private readonly includesResolved: string[],
     private readonly conditionsEvaluated: Record<string, string>,
+    private readonly parserVersion: string,
     private readonly fileVersion?: string
   ) {}
 
@@ -63,7 +64,7 @@ export class Emitter {
 
   buildMetadata(): ParseMetadata {
     return {
-      version: this.fileVersion ?? "0.2",
+      version: this.fileVersion ?? this.parserVersion,
       parsed_from: this.filePath,
       parsed_at: new Date().toISOString(),
       includes_resolved: this.includesResolved,

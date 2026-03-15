@@ -3,7 +3,7 @@
 // 値の再利用で DRY な仕様記述
 // =============================================
 
-@version "0.2"
+@version "0.2.0"
 @let ServiceName = "user-service"
 @let DefaultTimeout = 30
 @let IsEnabled = true

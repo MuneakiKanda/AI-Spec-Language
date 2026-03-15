@@ -6,11 +6,21 @@
 import { readFileSync } from "node:fs";
 import { writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { parse as aispecParse } from "@aispec/core";
+import { fileURLToPath } from "node:url";
+import { parse as aispecParse, PARSER_VERSION } from "@aispec/core";
 import type { FileResolver } from "@aispec/core";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8")) as { version: string };
+const CLI_VERSION = pkg.version;
 
 function main(): void {
   const args = process.argv.slice(2);
+
+  if (args.includes("--version") || args.includes("-v")) {
+    console.log(`aispec v${CLI_VERSION} (parser: ${PARSER_VERSION})`);
+    process.exit(0);
+  }
 
   if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
     printUsage();
@@ -34,7 +44,7 @@ function main(): void {
 
 function printUsage(): void {
   console.log(`
-AI-Spec Language CLI v0.2
+AI-Spec Language CLI v${CLI_VERSION} (parser: ${PARSER_VERSION})
 
 Usage:
   aispec parse <file> [options]    Parse .aispec to JSON
@@ -44,6 +54,7 @@ Options:
   --env <key=value>    Set environment variable (repeatable)
   --output <file>      Write output to file (default: stdout)
   --pretty             Pretty-print JSON output
+  -v, --version        Show version info
   -h, --help           Show this help
 `.trimStart());
 }
